@@ -122,6 +122,27 @@ test('Blatt Fall 7 / Heft: Dreieckslast 17 kN/m auf 5 m', () => {
   nah(e.maxM.M, (17 * 25) / (9 * Math.sqrt(3)), 0.01);
 });
 
+test('Blatt Fall 8: Moment am Auflager B, Q = ML / l, M steigt bis ML', () => {
+  const e = loese({ laenge: 6, lasten: [{ typ: 'moment', M: -10, x: 6 }] });
+  nah(e.AV, 10 / 6);
+  nah(e.BV, -10 / 6);
+  nah(e.Q(3), 10 / 6);
+  nah(e.M(6, 'l'), 10);
+  nah(e.M(6, 'r'), 0);
+  nah(e.maxM.M, 10);
+});
+
+test('Blatt Fall 9: Moment im Feld, Sprung von +ML·a/l auf −ML·b/l', () => {
+  const [ML, a, b] = [10, 2, 4];
+  const e = loese({ laenge: a + b, lasten: [{ typ: 'moment', M: -ML, x: a }] });
+  nah(e.Q(1), ML / 6);
+  nah(e.M(a, 'l'), (ML * a) / 6);
+  nah(e.M(a, 'r'), (-ML * b) / 6);
+  nah(e.M(6, 'r'), 0);
+  nah(e.minM.M, (-ML * b) / 6);
+  assert.ok(rechenweg(e).length >= 5);
+});
+
 test('Horizontalkraft: AH und Normalkraft', () => {
   const e = loese({ laenge: 4.2, lasten: [{ typ: 'horizontal', H: -6.9, x: 4.2 }] });
   nah(e.AH, 6.9);

@@ -85,6 +85,27 @@ export function systemSkizze(s) {
   // Träger
   teile.push(`<line class="traeger" x1="${px(0)}" y1="${yB}" x2="${px(s.L)}" y2="${yB}"/>`);
 
+  // Einzelmomente: Kreisbogen mit Pfeilspitze um den Angriffspunkt
+  for (const mo of s.momente ?? []) {
+    const x = px(mo.x);
+    const r = 13;
+    const punkt = (grad) => [x + r * Math.cos((grad * Math.PI) / 180), yB - r * Math.sin((grad * Math.PI) / 180)];
+    const imUhrzeigersinn = mo.M >= 0;
+    const [startGrad, endGrad] = imUhrzeigersinn ? [215, -35] : [-35, 215];
+    const [x1, y1] = punkt(startGrad);
+    const [x2, y2] = punkt(endGrad);
+    teile.push(`<path class="kraft bogen" d="M ${x1} ${y1} A ${r} ${r} 0 1 ${imUhrzeigersinn ? 1 : 0} ${x2} ${y2}"/>`);
+    const w = (endGrad * Math.PI) / 180;
+    const [tx, ty] = imUhrzeigersinn ? [Math.sin(w), Math.cos(w)] : [-Math.sin(w), -Math.cos(w)];
+    const spitze = [x2 + tx * 5, y2 + ty * 5];
+    const basis = [x2 - tx * 2, y2 - ty * 2];
+    teile.push(
+      `<polygon class="kraft-spitze" points="${spitze[0]},${spitze[1]} ${basis[0] - ty * 4},${basis[1] + tx * 4} ${basis[0] + ty * 4},${basis[1] - tx * 4}"/>`,
+    );
+    const anker = x < LINKS + 40 ? 'start' : x > W - LINKS - 40 ? 'end' : 'middle';
+    teile.push(`<text class="beschriftung kraft-text" x="${x}" y="${yB - r - 8}" text-anchor="${anker}">${mo.name} = ${z(Math.abs(mo.M))} kNm</text>`);
+  }
+
   // Auflager A (fest) und B (verschieblich)
   const a = px(s.xA);
   const b = px(s.xB);
@@ -99,7 +120,13 @@ export function systemSkizze(s) {
 
   // Maßkette
   const yM = yB + 56;
-  const roh = [0, s.L, ...s.einzel.map((e) => e.x), ...s.strecken.flatMap((st) => [st.x1, st.x2])].sort((p, q) => p - q);
+  const roh = [
+    0,
+    s.L,
+    ...s.einzel.map((e) => e.x),
+    ...(s.momente ?? []).map((mo) => mo.x),
+    ...s.strecken.flatMap((st) => [st.x1, st.x2]),
+  ].sort((p, q) => p - q);
   const punkte = roh.filter((x, i) => i === 0 || x - roh[i - 1] > 1e-7);
   teile.push(`<line class="mass" x1="${px(0)}" y1="${yM}" x2="${px(s.L)}" y2="${yM}"/>`);
   for (const x of punkte) teile.push(`<line class="mass" x1="${px(x) - 3}" y1="${yM + 4}" x2="${px(x) + 3}" y2="${yM - 4}"/>`);

@@ -1,4 +1,4 @@
-import { parseNum, fmt } from '../core/format.js';
+import { parseNum, fmt, alsEingabe } from '../core/format.js';
 import { lade, speichere } from '../core/speicher.js';
 import { loese, rechenweg } from '../core/traeger.js';
 import { systemSkizze, verlauf } from '../ui/diagramm.js';
@@ -11,10 +11,38 @@ const NEU = {
   strecke: () => ({ typ: 'strecke', q: '', von: '', bis: '' }),
   trapez: () => ({ typ: 'trapez', qL: '0', qR: '', von: '', bis: '' }),
   horizontal: () => ({ typ: 'horizontal', H: '', x: '', richtung: 'links' }),
+  moment: () => ({ typ: 'moment', M: '', x: '', richtung: 'gegen' }),
 };
 
-const TITEL = { einzel: 'Einzellast', strecke: 'Streckenlast', trapez: 'Dreiecks-/Trapezlast', horizontal: 'Horizontalkraft' };
-const KUERZEL = { einzel: 'F', strecke: 'q', trapez: 'q', horizontal: 'H' };
+const TITEL = {
+  einzel: 'Einzellast',
+  strecke: 'Streckenlast',
+  trapez: 'Dreiecks-/Trapezlast',
+  horizontal: 'Horizontalkraft',
+  moment: 'Moment',
+};
+const KUERZEL = { einzel: 'F', strecke: 'q', trapez: 'q', horizontal: 'H', moment: 'ML' };
+
+// Die neun Fälle vom Arbeitsblatt "Typische Schnittkraftverläufe".
+// Jede Vorlage trägt Beispielwerte ein, die danach geändert werden können.
+const n = (x) => alsEingabe(Math.round(x * 100) / 100);
+const VORLAGEN = [
+  { titel: 'Einzellast in der Mitte', lasten: (L) => [{ typ: 'einzel', F: '10', x: n(L / 2) }] },
+  { titel: 'Einzellast außermittig', lasten: (L) => [{ typ: 'einzel', F: '10', x: n(L / 3) }] },
+  {
+    titel: 'Zwei gleiche Einzellasten',
+    lasten: (L) => [
+      { typ: 'einzel', F: '10', x: n(L / 4) },
+      { typ: 'einzel', F: '10', x: n((3 * L) / 4) },
+    ],
+  },
+  { titel: 'Streckenlast über die ganze Länge', lasten: () => [{ typ: 'strecke', q: '2', von: '', bis: '' }] },
+  { titel: 'Streckenlast links (Teilstück)', lasten: (L) => [{ typ: 'strecke', q: '2', von: '', bis: n(L / 2) }] },
+  { titel: 'Streckenlast im Feld (Teilstück)', lasten: (L) => [{ typ: 'strecke', q: '2', von: n(L / 3), bis: n((2 * L) / 3) }] },
+  { titel: 'Dreieckslast', lasten: () => [{ typ: 'trapez', qL: '0', qR: '4', von: '', bis: '' }] },
+  { titel: 'Moment am Auflager B', lasten: (L) => [{ typ: 'moment', M: '10', x: n(L), richtung: 'gegen' }] },
+  { titel: 'Moment im Feld', lasten: (L) => [{ typ: 'moment', M: '10', x: n(L / 3), richtung: 'gegen' }] },
+];
 
 // Eingaben (Texte) in das Rechenmodell übersetzen
 function zuSystem(st) {
@@ -25,6 +53,10 @@ function zuSystem(st) {
     if (l.typ === 'horizontal') {
       const betrag = parseNum(l.H);
       return { typ: 'horizontal', H: l.richtung === 'links' ? -betrag : betrag, x: parseNum(l.x) };
+    }
+    if (l.typ === 'moment') {
+      const betrag = parseNum(l.M);
+      return { typ: 'moment', M: l.richtung === 'im' ? betrag : -betrag, x: parseNum(l.x) };
     }
     if (l.typ === 'strecke') {
       const q = parseNum(l.q);
@@ -68,7 +100,10 @@ export default {
       const markenM = [
         { x: erg.maxM.x, v: erg.maxM.M },
         { x: erg.minM.x, v: erg.minM.M },
-        ...erg.stellen.map((p) => ({ x: p.x, v: p.M })),
+        ...erg.stellen.flatMap((p) => [
+          { x: p.x, v: p.Ml },
+          { x: p.x, v: p.Mr },
+        ]),
       ];
       const markenN = erg.stellen.flatMap((p) => [
         { x: p.x, v: p.Nr },
@@ -109,7 +144,7 @@ export default {
     };
 
     const zeichne = () => {
-      const zaehler = { F: 0, q: 0, H: 0 };
+      const zaehler = { F: 0, q: 0, H: 0, ML: 0 };
       const setze = (last, schluessel) => (v) => {
         last[schluessel] = v;
         rechne();
@@ -137,6 +172,20 @@ export default {
             feld({ label: `${name} rechts`, einheit: 'kN/m', wert: last.qR, onInput: setze(last, 'qR') }),
             feld({ label: 'von', einheit: 'm', wert: last.von, platzhalter: '0', onInput: setze(last, 'von') }),
             feld({ label: 'bis', einheit: 'm', wert: last.bis, platzhalter: 'L', onInput: setze(last, 'bis') }),
+          ];
+        } else if (last.typ === 'moment') {
+          felder = [
+            feld({ label: `Moment ${name}`, einheit: 'kNm', wert: last.M, onInput: setze(last, 'M') }),
+            feld({ label: 'Abstand von A', einheit: 'm', wert: last.x, onInput: setze(last, 'x') }),
+            auswahl({
+              label: 'Drehrichtung',
+              wert: last.richtung,
+              optionen: [
+                ['gegen', '↺ gegen den Uhrzeiger'],
+                ['im', '↻ im Uhrzeigersinn'],
+              ],
+              onChange: setze(last, 'richtung'),
+            }),
           ];
         } else {
           felder = [
@@ -213,13 +262,33 @@ export default {
         ),
         karte(
           'Lasten',
+          h(
+            'div',
+            { class: 'vorlage' },
+            auswahl({
+              label: 'Lastfall vom Arbeitsblatt laden',
+              wert: '',
+              optionen: [['', 'Fall 1 bis 9 auswählen …'], ...VORLAGEN.map((v, i) => [i, `${i + 1}. ${v.titel}`])],
+              hinweis: 'Ersetzt die Lasten unten durch Beispielwerte. Die Zahlen können Sie danach ändern.',
+              onChange: (v) => {
+                if (v === '') return;
+                const L = parseNum(st.L);
+                if (!(L > 0)) st.L = '6';
+                st.lasten = VORLAGEN[Number(v)].lasten(L > 0 ? L : 6);
+                zeichne();
+                rechne();
+              },
+            }),
+          ),
           lastKarten.length ? lastKarten : h('p', { class: 'erklaerung' }, 'Noch keine Last eingetragen.'),
+          h('p', { class: 'feld-label' }, 'Eigene Last hinzufügen'),
           h(
             'div',
             { class: 'knopfzeile' },
             hinzu('einzel', 'Einzellast'),
             hinzu('strecke', 'Streckenlast'),
             hinzu('trapez', 'Dreieckslast'),
+            hinzu('moment', 'Moment'),
             hinzu('horizontal', 'Horizontalkraft'),
           ),
           h('p', { class: 'erklaerung' }, 'Lasten wirken nach unten. Abstände werden vom linken Auflager A gemessen.'),

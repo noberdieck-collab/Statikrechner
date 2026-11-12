@@ -264,6 +264,16 @@ body {
   border-radius: 12px;
 }
 
+.vorlage {
+  margin: 0 0 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--linie);
+}
+
+p.feld-label {
+  margin: 4px 0 8px;
+}
+
 .last-kopf {
   display: flex;
   align-items: center;
@@ -501,6 +511,10 @@ svg text.beschriftung {
 .kraft {
   stroke: var(--last);
   stroke-width: 2;
+}
+
+.bogen {
+  fill: none;
 }
 
 .qpfeil-spitze,

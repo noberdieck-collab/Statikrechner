@@ -2,6 +2,7 @@
 //
 // Vorzeichen:
 //   Lasten F und q wirken positiv nach unten, Horizontalkräfte H positiv nach rechts.
+//   Einzelmomente ML positiv im Uhrzeigersinn.
 //   Auflagerkräfte AV, BV positiv nach oben, AH positiv nach rechts.
 //   Q positiv, wenn die Summe der Kräfte links vom Schnitt nach oben zeigt.
 //   M positiv, wenn die Unterseite gezogen wird. N positiv = Zug.
@@ -19,7 +20,7 @@ export function normalisiere(system) {
   const xB = system.xB ?? L;
   if (!(xB - xA > EPS)) throw new Error('Auflager B muss rechts von Auflager A liegen.');
 
-  const s = { L, xA, xB, einzel: [], horizontal: [], strecken: [] };
+  const s = { L, xA, xB, einzel: [], horizontal: [], strecken: [], momente: [] };
   const innen = (x) => x >= -EPS && x <= L + EPS;
 
   for (const last of system.lasten ?? []) {
@@ -33,6 +34,12 @@ export function normalisiere(system) {
       if (!Number.isFinite(last.H) || !Number.isFinite(last.x)) throw new Error(`${name}: Bitte Kraft und Abstand eingeben.`);
       if (!innen(last.x)) throw new Error(`${name}: Der Abstand muss zwischen 0 und L liegen.`);
       s.horizontal.push({ name, H: last.H, x: last.x });
+    } else if (last.typ === 'moment') {
+      // M positiv = dreht im Uhrzeigersinn
+      const name = `ML${s.momente.length + 1}`;
+      if (!Number.isFinite(last.M) || !Number.isFinite(last.x)) throw new Error(`${name}: Bitte Moment und Abstand eingeben.`);
+      if (!innen(last.x)) throw new Error(`${name}: Der Abstand muss zwischen 0 und L liegen.`);
+      s.momente.push({ name, M: last.M, x: last.x });
     } else if (last.typ === 'strecke') {
       const name = `q${s.strecken.length + 1}`;
       const { q1, q2, x1, x2 } = last;
@@ -93,6 +100,7 @@ export function loese(system) {
     summeV += r.R;
   }
   for (const hz of s.horizontal) summeH += hz.H;
+  for (const mo of s.momente) momentUmA += mo.M;
 
   const BV = momentUmA / spannweite;
   const AV = summeV - BV;
@@ -110,8 +118,10 @@ export function loese(system) {
     return q;
   };
 
-  const M = (x) => {
+  // Bei einem Einzelmoment springt M, deshalb auch hier links/rechts
+  const M = (x, seite = 'r') => {
     let m = 0;
+    for (const mo of s.momente) if (liegtLinks(mo.x, x, seite)) m += mo.M;
     if (s.xA < x) m += AV * (x - s.xA);
     if (s.xB < x) m += BV * (x - s.xB);
     for (const e of s.einzel) if (e.x < x) m -= e.F * (x - e.x);
@@ -133,6 +143,7 @@ export function loese(system) {
   const roh = [0, s.L, s.xA, s.xB];
   for (const e of s.einzel) roh.push(e.x);
   for (const hz of s.horizontal) roh.push(hz.x);
+  for (const mo of s.momente) roh.push(mo.x);
   for (const st of s.strecken) roh.push(st.x1, st.x2);
   roh.sort((a, b) => a - b);
   const xs = [];
@@ -142,7 +153,8 @@ export function loese(system) {
     x,
     Ql: Q(x, 'l'),
     Qr: Q(x, 'r'),
-    M: M(x),
+    Ml: M(x, 'l'),
+    Mr: M(x, 'r'),
     Nl: N(x, 'l'),
     Nr: N(x, 'r'),
   }));
@@ -178,7 +190,13 @@ export function loese(system) {
     }
   }
 
-  const kandidatenM = [...stellen.map((p) => ({ x: p.x, M: p.M })), ...nullstellen.map((p) => ({ x: p.x, M: p.M }))];
+  const kandidatenM = [
+    ...stellen.flatMap((p) => [
+      { x: p.x, M: p.Ml },
+      { x: p.x, M: p.Mr },
+    ]),
+    ...nullstellen.map((p) => ({ x: p.x, M: p.M })),
+  ];
   const maxM = kandidatenM.reduce((a, b) => (b.M > a.M ? b : a));
   const minM = kandidatenM.reduce((a, b) => (b.M < a.M ? b : a));
   let maxQ = { x: 0, Q: 0 };
@@ -194,7 +212,7 @@ export function loese(system) {
     for (let j = 0; j <= TEILE; j++) {
       const x = j === TEILE ? xs[i + 1] : xs[i] + ((xs[i + 1] - xs[i]) * j) / TEILE;
       const seite = j === TEILE ? 'l' : 'r';
-      kurve.push({ x, Q: Q(x, seite), M: M(x), N: N(x, seite) });
+      kurve.push({ x, Q: Q(x, seite), M: M(x, seite), N: N(x, seite) });
     }
   }
 
@@ -205,9 +223,17 @@ export function loese(system) {
 // Rechenweg
 // ---------------------------------------------------------------------------
 
-function momentAusdruck(erg, x) {
+// Verbindet Summanden mit + und −: [{ text, minus }] -> "a + b − c"
+function summe(teile) {
+  return teile
+    .map((t, i) => (i === 0 ? `${t.minus ? '−' : ''}${t.text}` : `${t.minus ? '−' : '+'} ${t.text}`))
+    .join(' ');
+}
+
+function momentAusdruck(erg, x, seite = 'r') {
   const s = erg.system;
   const teileText = [];
+  const momente = s.momente.filter((mo) => (seite === 'r' ? mo.x <= x + EPS : mo.x < x - EPS));
   if (s.xA < x - EPS) teileText.push(`${z(erg.AV)} · ${z(x - s.xA)}`);
   if (s.xB < x - EPS) teileText.push(`+ ${z(erg.BV)} · ${z(x - s.xB)}`);
   for (const e of s.einzel) if (e.x < x - EPS) teileText.push(`− ${z(e.F)} · ${z(x - e.x)}`);
@@ -217,7 +243,8 @@ function momentAusdruck(erg, x) {
     if (formVon(st) === 'gleich') teileText.push(`− ${z(st.q1)} · ${z(t.d)} · ${z(x - t.xR)}`);
     else teileText.push(`− ${z(t.R)} · ${z(x - t.xR)}`);
   }
-  return teileText.length ? teileText.join(' ') : '0';
+  for (const mo of momente) teileText.push(`${mo.M >= 0 ? '+' : '−'} ${z(Math.abs(mo.M))}`);
+  return teileText.length ? teileText.join(' ').replace(/^\+ /, '') : '0';
 }
 
 export function rechenweg(erg) {
@@ -255,23 +282,28 @@ export function rechenweg(erg) {
   const symbole = [];
   const zahlen = [];
   for (const e of s.einzel) {
-    symbole.push(`${e.name} · x${e.name}`);
-    zahlen.push(`${z(e.F)} · ${z(e.x - s.xA)}`);
+    symbole.push({ text: `${e.name} · x${e.name}` });
+    zahlen.push({ text: `${z(e.F)} · ${z(e.x - s.xA)}` });
   }
   erg.resultierenden.forEach((r, i) => {
-    symbole.push(`R${i + 1} · xR${i + 1}`);
-    zahlen.push(`${z(r.R)} · ${z(r.xR - s.xA)}`);
+    symbole.push({ text: `R${i + 1} · xR${i + 1}` });
+    zahlen.push({ text: `${z(r.R)} · ${z(r.xR - s.xA)}` });
   });
+  for (const mo of s.momente) {
+    symbole.push({ text: mo.name, minus: mo.M < 0 });
+    zahlen.push({ text: z(Math.abs(mo.M)), minus: mo.M < 0 });
+  }
   if (symbole.length) {
-    schritte.push({
-      titel: 'Summe der Momente um A  (↻ +)',
-      zeilen: [
-        `ΣM(A) = 0:  0 = ${symbole.join(' + ')} − BV · L`,
-        `BV = (${symbole.join(' + ')}) / L`,
-        `BV = (${zahlen.join(' + ')}) / ${z(L)}`,
-        { t: `BV = ${fmt(erg.BV)} kN`, art: 'ergebnis' },
-      ],
-    });
+    const zeilen = [
+      `ΣM(A) = 0:  0 = ${summe(symbole)} − BV · L`,
+      `BV = (${summe(symbole)}) / L`,
+      `BV = (${summe(zahlen)}) / ${z(L)}`,
+      { t: `BV = ${fmt(erg.BV)} kN`, art: 'ergebnis', notiz: erg.BV < -EPS ? 'wirkt nach unten' : '' },
+    ];
+    if (s.momente.length) {
+      zeilen.push({ t: 'Ein Moment zählt ohne Hebelarm: im Uhrzeigersinn +, dagegen −.', art: 'hinweis' });
+    }
+    schritte.push({ titel: 'Summe der Momente um A  (↻ +)', zeilen });
   } else {
     schritte.push({
       titel: 'Summe der Momente um A  (↻ +)',
@@ -294,7 +326,14 @@ export function rechenweg(erg) {
       ],
     });
   } else {
-    schritte.push({ titel: 'Summe der Vertikalkräfte  (↑ +)', zeilen: [{ t: 'AV = 0 kN', art: 'ergebnis' }] });
+    schritte.push({
+      titel: 'Summe der Vertikalkräfte  (↑ +)',
+      zeilen: [
+        'ΣV = 0:  0 = AV + BV',
+        `AV = −BV = −${z(erg.BV)}`,
+        { t: `AV = ${fmt(erg.AV)} kN`, art: 'ergebnis', notiz: erg.AV < -EPS ? 'wirkt nach unten' : '' },
+      ],
+    });
   }
 
   // 4. Horizontales Gleichgewicht
@@ -354,11 +393,22 @@ export function rechenweg(erg) {
   // 6. Biegemoment
   const zeilenM = [{ t: 'M = Summe der Momente aller Kräfte links vom Schnitt (Kraft · Abstand zum Schnitt).', art: 'hinweis' }];
   const punkte = [
-    ...erg.stellen.filter((p) => p.x > EPS && p.x < s.L - EPS).map((p) => ({ x: p.x })),
-    ...erg.nullstellen.map((n) => ({ x: n.x, null: true })),
+    ...erg.stellen
+      .filter((p) => (p.x > EPS && p.x < s.L - EPS) || Math.abs(p.Ml - p.Mr) > 1e-7)
+      .map((p) => ({ x: p.x, Ml: p.Ml, Mr: p.Mr })),
+    ...erg.nullstellen.map((n) => ({ x: n.x })),
   ].sort((a, b) => a.x - b.x);
   for (const p of punkte) {
-    zeilenM.push(`M(x = ${z(p.x)} m) = ${momentAusdruck(erg, p.x)} = ${fmt(erg.M(p.x))} kNm`);
+    if (p.Ml !== undefined && Math.abs(p.Ml - p.Mr) > 1e-7) {
+      // Sprung im Momentenverlauf durch ein Einzelmoment
+      if (p.x > EPS) zeilenM.push(`M(x = ${z(p.x)} m, links) = ${momentAusdruck(erg, p.x, 'l')} = ${fmt(p.Ml)} kNm`);
+      if (p.x < s.L - EPS) zeilenM.push(`M(x = ${z(p.x)} m, rechts) = ${momentAusdruck(erg, p.x, 'r')} = ${fmt(p.Mr)} kNm`);
+    } else {
+      zeilenM.push(`M(x = ${z(p.x)} m) = ${momentAusdruck(erg, p.x)} = ${fmt(erg.M(p.x))} kNm`);
+    }
+  }
+  if (s.momente.length) {
+    zeilenM.push({ t: 'An der Stelle eines Einzelmoments springt M um dessen Größe.', art: 'hinweis' });
   }
   if (!punkte.length) zeilenM.push('Keine Lasten: M = 0');
   if (Math.abs(erg.maxM.M) > 1e-7 && erg.maxM.M > 0) {
