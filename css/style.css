@@ -1,0 +1,580 @@
+:root {
+  --papier: #f4f2ec;
+  --flaeche: #ffffff;
+  --linie: #dcd8cd;
+  --tinte: #1b222b;
+  --tinte-leise: #5c6672;
+  --akzent: #1d5aa6;
+  --akzent-flaeche: #e6eef8;
+  --last: #b4321f;
+  --q-farbe: #1d5aa6;
+  --m-farbe: #a3541a;
+  --n-farbe: #2f7d4f;
+  --ergebnis: #0f3f78;
+  --schatten: 0 1px 2px rgba(27, 34, 43, 0.06);
+  --rund: 14px;
+  --formel-schrift: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --papier: #14181d;
+    --flaeche: #1c2229;
+    --linie: #2e3741;
+    --tinte: #e9edf1;
+    --tinte-leise: #9aa5b1;
+    --akzent: #7db3f0;
+    --akzent-flaeche: #1f2f44;
+    --last: #f08a76;
+    --q-farbe: #7db3f0;
+    --m-farbe: #e8a569;
+    --n-farbe: #7fcf9d;
+    --ergebnis: #a9cdf6;
+    --schatten: none;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--papier);
+  color: var(--tinte);
+  font: 16px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+#app {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+}
+
+/* Kopf ------------------------------------------------------------------ */
+
+.kopf {
+  padding: 18px 0 14px;
+}
+
+.kopf.start {
+  padding-top: 40px;
+}
+
+.kopf h1 {
+  margin: 0;
+  font-size: 1.7rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.kopf.start h1 {
+  font-size: 2.3rem;
+}
+
+.marke-text {
+  margin: 0 0 4px;
+  color: var(--akzent);
+  font: 600 0.8rem/1 var(--formel-schrift);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.unterzeile {
+  margin: 6px 0 0;
+  color: var(--tinte-leise);
+}
+
+.zurueck {
+  display: inline-block;
+  margin: 0 0 6px -4px;
+  padding: 8px 4px;
+  color: var(--akzent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Startseite ------------------------------------------------------------ */
+
+.modul-liste {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0 18px;
+}
+
+.modul {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: var(--rund);
+  box-shadow: var(--schatten);
+  color: inherit;
+  text-decoration: none;
+}
+
+.modul:active {
+  background: var(--akzent-flaeche);
+}
+
+.modul-nummer {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--akzent-flaeche);
+  color: var(--akzent);
+  font: 700 1rem/36px var(--formel-schrift);
+  text-align: center;
+}
+
+.modul-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+}
+
+.modul-text strong {
+  font-size: 1.05rem;
+}
+
+.modul-text small {
+  color: var(--tinte-leise);
+  font-size: 0.875rem;
+}
+
+.modul-pfeil {
+  color: var(--tinte-leise);
+  font-size: 1.5rem;
+}
+
+.geplant {
+  margin: 0;
+  padding-left: 1.2em;
+  color: var(--tinte-leise);
+}
+
+/* Karten ---------------------------------------------------------------- */
+
+.karte {
+  margin: 0 0 14px;
+  padding: 16px;
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: var(--rund);
+  box-shadow: var(--schatten);
+}
+
+.karte.ruhig {
+  background: transparent;
+  box-shadow: none;
+}
+
+.karte h2 {
+  margin: 0 0 12px;
+  color: var(--tinte-leise);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Eingaben -------------------------------------------------------------- */
+
+.raster {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px 14px;
+}
+
+.raster.eng {
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+}
+
+.feld {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.feld-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.feld-eingabe {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  background: var(--papier);
+  border: 1px solid var(--linie);
+  border-radius: 10px;
+}
+
+.feld-eingabe:focus-within {
+  border-color: var(--akzent);
+  box-shadow: 0 0 0 3px var(--akzent-flaeche);
+}
+
+.feld-eingabe input,
+.feld-eingabe select {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 1.0625rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.feld-eingabe input::placeholder {
+  color: var(--tinte-leise);
+  opacity: 0.75;
+  font-size: 0.9rem;
+}
+
+.einheit {
+  flex: none;
+  padding: 0 12px 0 4px;
+  color: var(--tinte-leise);
+  font-size: 0.9rem;
+}
+
+.feld-hinweis {
+  color: var(--tinte-leise);
+  font-size: 0.8rem;
+}
+
+.last {
+  margin: 0 0 12px;
+  padding: 12px;
+  border: 1px dashed var(--linie);
+  border-radius: 12px;
+}
+
+.last-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.knopfzeile {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 10px;
+}
+
+.knopf,
+.chip {
+  min-height: 44px;
+  padding: 0 14px;
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: 10px;
+  color: var(--akzent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.knopf.klein {
+  min-height: 34px;
+  padding: 0 10px;
+  color: var(--tinte-leise);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.knopf.haupt {
+  width: 100%;
+  margin-top: 14px;
+  background: var(--akzent);
+  border-color: var(--akzent);
+  color: var(--flaeche);
+}
+
+.chip {
+  min-height: 36px;
+  margin-top: 6px;
+  padding: 0 10px;
+  background: var(--akzent-flaeche);
+  border-color: transparent;
+  font-size: 0.85rem;
+}
+
+.knopf:focus-visible,
+.chip:focus-visible,
+.modul:focus-visible,
+.zurueck:focus-visible {
+  outline: 3px solid var(--akzent);
+  outline-offset: 2px;
+}
+
+/* Ergebnisse ------------------------------------------------------------ */
+
+.ergebnisse {
+  margin: 0;
+}
+
+.ergebnis-zeile {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--linie);
+}
+
+.ergebnis-zeile:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.ergebnis-zeile dt {
+  font: 600 1rem var(--formel-schrift);
+}
+
+.ergebnis-zeile dt small {
+  display: block;
+  color: var(--tinte-leise);
+  font: 400 0.8rem/1.3 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.ergebnis-zeile dd {
+  margin: 0;
+  color: var(--ergebnis);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ergebnis-zeile dd strong {
+  font-size: 1.35rem;
+}
+
+.ergebnis-zeile dd span {
+  color: var(--tinte-leise);
+  font-size: 0.9rem;
+}
+
+.meldung {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  background: var(--akzent-flaeche);
+  border-radius: 12px;
+}
+
+.erklaerung {
+  margin: 8px 0 0;
+  color: var(--tinte-leise);
+  font-size: 0.875rem;
+}
+
+/* Rechenweg ------------------------------------------------------------- */
+
+.rechenweg {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: schritt;
+}
+
+.rechenweg li {
+  counter-increment: schritt;
+  padding: 14px 0 12px;
+  border-top: 1px solid var(--linie);
+}
+
+.rechenweg li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.rechenweg h3 {
+  margin: 0 0 8px;
+  font-size: 0.98rem;
+}
+
+.rechenweg h3::before {
+  content: counter(schritt) '. ';
+  color: var(--akzent);
+}
+
+.formel {
+  margin: 3px 0;
+  overflow-x: auto;
+  font: 0.92rem/1.6 var(--formel-schrift);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.formel.resultat {
+  margin-top: 6px;
+  color: var(--ergebnis);
+  font-weight: 700;
+}
+
+/* doppelt unterstrichen, wie ein Ergebnis im Heft */
+.formel.resultat span {
+  padding-bottom: 1px;
+  border-bottom: 3px double currentColor;
+}
+
+.formel.resultat small {
+  margin-left: 10px;
+  color: var(--tinte-leise);
+  font: 400 0.8rem -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.rechenweg .erklaerung {
+  margin: 0 0 6px;
+}
+
+/* Zeichnungen ----------------------------------------------------------- */
+
+.zeichnung svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 620px;
+  margin: 0 auto 6px;
+}
+
+svg text {
+  fill: var(--tinte);
+  font: 10px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* heller Rand um Beschriftungen, damit sie auf Linien lesbar bleiben */
+svg text.beschriftung {
+  paint-order: stroke;
+  stroke: var(--flaeche);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.traeger {
+  stroke: var(--tinte);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+
+.auflager {
+  fill: var(--flaeche);
+  stroke: var(--tinte);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+.schraffur,
+.mass {
+  stroke: var(--tinte-leise);
+  stroke-width: 1;
+}
+
+.strecke {
+  fill: var(--last);
+  fill-opacity: 0.1;
+  stroke: var(--last);
+  stroke-width: 1;
+}
+
+.qpfeil {
+  stroke: var(--last);
+  stroke-width: 1;
+}
+
+.kraft {
+  stroke: var(--last);
+  stroke-width: 2;
+}
+
+.qpfeil-spitze,
+.kraft-spitze {
+  fill: var(--last);
+}
+
+svg text.kraft-text {
+  fill: var(--last);
+  font-weight: 600;
+}
+
+svg text.name {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+svg text.mass-text,
+svg text.einheit-text {
+  fill: var(--tinte-leise);
+}
+
+svg text.verlauf-titel {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+svg text.wert {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+svg text.vorzeichen {
+  font-size: 15px;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+.achse {
+  stroke: var(--tinte);
+  stroke-width: 1.5;
+}
+
+.marke {
+  stroke: var(--tinte-leise);
+  stroke-width: 0.75;
+  stroke-dasharray: 2 2;
+}
+
+.flaeche {
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  fill-opacity: 0.16;
+}
+
+.flaeche.Q {
+  fill: var(--q-farbe);
+  stroke: var(--q-farbe);
+}
+
+.flaeche.M {
+  fill: var(--m-farbe);
+  stroke: var(--m-farbe);
+}
+
+.flaeche.N {
+  fill: var(--n-farbe);
+  stroke: var(--n-farbe);
+}
+
+@media print {
+  .knopf,
+  .chip,
+  .zurueck {
+    display: none;
+  }
+}
